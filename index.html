@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>宝可梦联盟 · Poké League</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="css/style.css">
+<link rel="icon" href="assets/art/25.png">
+</head>
+<body>
+
+<canvas id="game-canvas"></canvas>
+
+<!-- 加载屏 -->
+<div id="screen-loading" class="screen">
+  <div class="pokeball-spin"></div>
+  <h1 class="logo">宝可梦<span>联盟</span></h1>
+  <div class="load-track"><div id="load-bar"></div></div>
+  <div id="load-text">捕捉宝可梦中...</div>
+</div>
+
+<!-- 选人屏 -->
+<div id="screen-select" class="screen" style="display:none">
+  <h1 class="logo small">宝可梦<span>联盟</span> <em>· 峡谷之巅</em></h1>
+  <div class="select-body">
+    <div class="select-left">
+      <h3>选择你的宝可梦</h3>
+      <div id="champ-grid"></div>
+      <div class="diff-row">
+        <span>电脑难度:</span>
+        <button class="diff-btn" data-diff="easy">简单</button>
+        <button class="diff-btn sel" data-diff="normal">普通</button>
+        <button class="diff-btn" data-diff="hard">困难</button>
+      </div>
+      <div id="mp-panel">
+        <div class="mp-row">
+          <b>👥 双人联机:</b>
+          <button id="mp-host">创建房间</button>
+          <span class="mp-or">或</span>
+          <input id="mp-code" maxlength="4" placeholder="房间码">
+          <button id="mp-join">加入</button>
+        </div>
+        <div id="mp-status">与好友双人协力(蓝方) VS 电脑——需双方都在线</div>
+      </div>
+      <button id="btn-start">出发对战! (5 V 5)</button>
+    </div>
+    <div id="champ-detail" class="select-right">
+      <div class="cd-empty">← 点击一只宝可梦查看技能</div>
+    </div>
+  </div>
+</div>
+
+<!-- HUD -->
+<div id="hud" style="display:none">
+  <!-- 顶栏 -->
+  <div id="topbar">
+    <span id="score-blue">0</span>
+    <span id="game-timer">0:00</span>
+    <span id="score-red">0</span>
+    <button id="btn-addai" title="添加电脑角色">➕ 添加AI</button>
+  </div>
+
+  <!-- 击杀播报 -->
+  <div id="killfeed"></div>
+  <div id="announce"></div>
+  <div id="msg"></div>
+
+  <!-- 底部主面板 -->
+  <div id="bottombar">
+    <div id="portrait-wrap">
+      <img id="portrait" src="">
+      <span id="hud-level">1</span>
+    </div>
+    <div id="mid-panel">
+      <div id="hud-name-row"><span id="hud-name"></span>
+        <span class="hud-stat">⚔ <b id="hud-kda">0/0/0</b></span>
+        <span class="hud-stat">🗡 <b id="hud-cs">0</b></span>
+        <span class="hud-stat">💰 <b id="hud-gold">0</b></span>
+      </div>
+      <div class="bar hp-bar"><div id="hp-fill"></div><div id="hp-shield"></div><span id="hp-text"></span></div>
+      <div class="bar mp-bar"><div id="mp-fill"></div><span id="mp-text"></span></div>
+      <div class="bar xp-bar"><div id="xp-fill"></div></div>
+      <div id="skills"></div>
+    </div>
+    <div id="inventory"></div>
+  </div>
+
+  <!-- 小地图 -->
+  <canvas id="minimap" width="180" height="180"></canvas>
+
+  <!-- 死亡遮罩 -->
+  <div id="death" class="overlay" style="display:none">
+    <div class="death-box">
+      <div class="pokeball-flat"></div>
+      <h2>你的宝可梦倒下了...</h2>
+      <p><span id="death-timer">5</span> 秒后复活</p>
+    </div>
+  </div>
+</div>
+
+<!-- 伤害飘字层 -->
+<div id="floaters"></div>
+<div id="tooltip" style="display:none"></div>
+
+<!-- 商店 -->
+<div id="shop" class="modal" style="display:none">
+  <div class="modal-box shop-box">
+    <div class="modal-head">🛒 友好商店 <span class="shop-gold-wrap">💰<b id="shop-gold">0</b></span><button id="shop-close" class="x">✕</button></div>
+    <div class="modal-tip">在泉水处才能购买 · 最多6件装备 · 消耗品立即生效</div>
+    <div id="shop-grid"></div>
+  </div>
+</div>
+
+<!-- 计分板 -->
+<div id="scoreboard" class="modal" style="display:none">
+  <div class="modal-box sb-box">
+    <div class="modal-head">📊 战绩(按住Tab)</div>
+    <table id="sb-blue"></table>
+    <table id="sb-red"></table>
+  </div>
+</div>
+
+<!-- 添加 AI -->
+<div id="addai" class="modal" style="display:none">
+  <div class="modal-box addai-box">
+    <div class="modal-head">➕ 添加电脑角色 <button id="addai-close" class="x">✕</button></div>
+    <div id="addai-grid"></div>
+    <div class="addai-foot">
+      <label><input type="radio" name="ai-team" value="blue" checked> 🔵 加入我方</label>
+      <label><input type="radio" name="ai-team" value="red"> 🔴 加入敌方</label>
+      <button id="addai-go">召唤!</button>
+    </div>
+  </div>
+</div>
+
+<!-- 暂停 -->
+<div id="pause" class="modal" style="display:none">
+  <div class="modal-box pause-box">
+    <div class="modal-head">⏸ 菜单</div>
+    <label class="pt-row"><input type="checkbox" id="pt-sound" checked> 音效</label>
+    <label class="pt-row"><input type="checkbox" id="pt-music" checked> 音乐</label>
+    <div class="pause-help">
+      <b>操作说明</b><br>
+      右键 — 移动 / 攻击目标<br>
+      左键点敌人 — 锁定技能目标(再点空地取消)<br>
+      Q W E R — 释放技能(优先打锁定/悬停目标)<br>
+      Ctrl+Q/W/E/R — 升级技能<br>
+      D — 伤药喷雾 · F — 空间转移<br>
+      A+左键 — 攻击移动 · S — 停止<br>
+      B — 回城 · P — 商店 · Tab — 战绩<br>
+      Y — 镜头锁定切换 · 空格 — 看向英雄 · 滚轮 — 缩放
+    </div>
+    <button id="btn-resume">继续游戏</button>
+    <button id="btn-restart">重新开始</button>
+  </div>
+</div>
+
+<!-- 结算 -->
+<div id="end" class="overlay" style="display:none">
+  <div class="end-box">
+    <h1 id="end-title">胜利!</h1>
+    <p id="end-sub"></p>
+    <div id="end-stats"></div>
+    <button id="btn-again">再来一局</button>
+  </div>
+</div>
+
+<script src="js/three.min.js"></script>
+<script src="js/DRACOLoader.js"></script>
+<script src="js/GLTFLoader.js"></script>
+<script src="js/SkeletonUtils.js"></script>
+<script src="js/data.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/effects.js"></script>
+<script src="js/entities.js"></script>
+<script src="js/scenery.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/game.js"></script>
+<script src="js/peerjs.min.js"></script>
+<script src="js/net.js"></script>
+<script src="js/ui.js"></script>
+</body>
+</html>
