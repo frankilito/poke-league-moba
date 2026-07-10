@@ -4,6 +4,22 @@
    ============================================================ */
 window.NET = (function(){
 const PREFIX = 'poke-league-v1-';
+/* ICE 服务器:国内可直连 STUN 优先(小米/腾讯),Cloudflare/Google 海外备选,
+   免费 TURN 中继兜底(双方都打不通洞时走中转) */
+const ICE_CONFIG = {
+  iceServers: [
+    {urls: 'stun:stun.miwifi.com:3478'},                    // 小米(国内)
+    {urls: 'stun:stun.qq.com:3478'},                        // 腾讯(国内)
+    {urls: 'stun:stun.cloudflare.com:3478'},                // Cloudflare(海外备选)
+    {urls: 'stun:stun.l.google.com:19302'},                 // Google(海外备选)
+    {urls: ['turn:openrelay.metered.ca:80',                 // 免费TURN中继兜底
+            'turn:openrelay.metered.ca:443',
+            'turn:openrelay.metered.ca:443?transport=tcp'],
+     username: 'openrelayproject', credential: 'openrelayproject'},
+  ],
+  iceCandidatePoolSize: 4,
+};
+const PEER_OPTS = {debug:0, config: ICE_CONFIG};
 const S = {
   role:'off',            // off | host | guest
   peer:null, conn:null,
@@ -36,7 +52,7 @@ function createRoom(onStatus){
   S.role = 'host';
   S.code = randCode();
   onStatus('正在连接联机服务...');
-  const peer = new Peer(PREFIX+S.code, {debug:0});
+  const peer = new Peer(PREFIX+S.code, PEER_OPTS);
   S.peer = peer;
   peer.on('open', ()=>onStatus('房间已创建,等待好友加入', S.code));
   peer.on('error', err=>{
@@ -59,7 +75,7 @@ function createRoom(onStatus){
 function joinRoom(code, onStatus){
   S.role = 'guest';
   onStatus('正在连接联机服务...');
-  const peer = new Peer({debug:0});
+  const peer = new Peer(PEER_OPTS);
   S.peer = peer;
   peer.on('error', err=>onStatus('连接失败: '+(err.type==='peer-unavailable'?'房间不存在':err.type)));
   peer.on('open', ()=>{
